@@ -1,0 +1,8 @@
+@cube
+layout cubetest 
+import testinstance
+beginlayout
+box (0 0.5 1 2) m1 0
+testinstance 0 0
+ 
+endlayout
