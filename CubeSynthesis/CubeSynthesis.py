@@ -273,7 +273,9 @@ class CubeSynthesis:
        
         file.close()         
         return structure
-    
+    def layer_map(self,layer_file,init_pdk,target_pdk):
+        layer = pd.read_csv(layer_file)
+        
     
     def gds_to_cube(self,gds_file,cube_folder):
         with open(gds_file, 'rb') as stream:
