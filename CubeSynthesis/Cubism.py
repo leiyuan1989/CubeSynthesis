@@ -4,15 +4,12 @@ Created on Mon Jun 10 10:39:52 2019
 
 @author: leiyuan
 """
-
-#CubeSynthesis 1st editon
-
 from  python_gdsii.gdsii.library import Library
 from  python_gdsii.gdsii.structure import Structure
 from  python_gdsii.gdsii.elements import Boundary,ARef,Box,Path,SRef,Text
 import os
 import re
-
+import pandas as pd
 
 
 class _element:
@@ -70,10 +67,16 @@ class _element:
         self.abs_xy = [(t[0] + vector_x,t[1] + vector_y) for t in xy_init]          
         
         
-class _box:
-    def __init__(self):
-        pass
-    def _B_box(self,xy):
+class _Box:
+    def __init__(self,name):
+        self.name = name
+    def _load_cubism_data(self,xy,para,line):
+        self.xy = list(eval(xy))
+        self.layer = list(eval(para))
+        self._load_data(self.xy)
+        self.cubism_line = line
+        
+    def _load_data(self,xy):    
         x = [t[0] for t in xy]
         y = [t[1] for t in xy]        
         self.l = min(x)
@@ -86,16 +89,132 @@ class _box:
         self.ru = (self.r,self.u)
         self.width = self.r - self.l
         self.height = self.u - self.d
-        self.centre = ((self.l + self.r)/2,(self.u + self.d)/2)  
-    def _I_box(self,xy,structure_dict):
-        #future
+        self.centre = ((self.l + self.r)/2,(self.u + self.d)/2) 
+    def _to_gds(self):
         pass
         
+
+class _Path:
+    def __init__(self,name):
+        self.name = name
+    def _load_cubism_data(self,xy,para,line):
+        self.xy = list(eval(xy))
+        para =  list(eval(para))
+        self.width = para[0]
+        self.layer = [para[1],para[2]]
+        self.cubism_line = line        
+    def _to_gds(self):
+        pass
+    
+class _SRef:
+    def __init__(self,name):
+        self.name = name
+    def _load_cubism_data(self,xy,para,line):
+        #rotation[0]: X mirror, rotation[1]: angle 
+        self.xy = list(eval(xy))
+        sname,mirror,angle = para.split(',')
+        self.sname = sname
+        self.mirror = int(mirror)
+        self.angle = float(angle)
+        self.cubism_line = line
+    def _to_gds(self):
+        pass
+    
+        
+        
+class _structure:
+    def __init__(self):
+        self.e_dict={}
+        self.b_dict={}
+        self.p_dict={}
+        self.i_dict={}
+        self.s_dict = {}#structure dict
+#    def _get(self,ename):
+#        element = self.e_dict[ename]
+#        if element
+
+        print('ss')
+    def _load_structure(self,cubism_folder,cubism_file):
+        file = open(cubism_folder+cubism_file, "r") 
+        text = [t.strip() for t in file.readlines()]  
+        if text[0] == '@cubism':
+            self.name = text[1].split()[1]
+            B_count = 0
+            P_count = 0
+            I_count = 0
+            for line in text[2:]:  
+                if line == 'endlayout':
+                    break
+                else:
+                    dtype = line.split()[0]
+                    rex = re.findall(r'\[(.*?)\]', line)
+                    #----------------------------------------------------------    
+                    if dtype == 'B':
+                        name = 'B' + str(B_count)
+                        B_count = B_count + 1
+                        B = _Box(name)
+                        B._load_cubism_data(rex[0],rex[1],line)
+                        self.e_dict[name] = B
+                        self.b_dict[name] = B
+                    #----------------------------------------------------------
+                    elif dtype == 'P':
+                        name = 'P' + str(P_count)
+                        P_count = P_count + 1
+                        P = _Path(name)
+                        P._load_cubism_data(rex[0],rex[1],line)
+                        self.e_dict[name] = P
+                        self.p_dict[name] = P
+                    #----------------------------------------------------------       
+                    elif  dtype == 'I':   
+                        name = 'I' + str(I_count)
+                        I_count = I_count + 1
+                        I = _SRef(name)
+                        I._load_cubism_data(rex[0],rex[1],line)
+                        self.e_dict[name] = I
+                        self.i_dict[name] = I
+                        #
+                        if I.sname in self.s_dict.keys():
+                            pass
+                        else:
+                           New_S = _structure()
+                           New_S.s_dict = self.s_dict
+                           New_S._load_structure(cubism_folder,I.sname+'.cu') 
+                           self.s_dict = New_S.s_dict
+                    #----------------------------------------------------------                           
+                    else:
+                        print(line)
+                        print('-----some element unrealized------')     
+        else:
+            print('Format Error!!!')      
+        file.close()                     
+        self.s_dict[self.name] = self    
         
 
+#
+#def read_shape(loc_data,structure):
+#
+#    print('-')
+#def read_point():
+#    if 0-9:
+#        eval()
+#    if b0.ss:
+#        s.e_dict[b0].ss
+#        
+#        
+def read_coord(data,struct):
+    s = data
+    #e.x.: "@-><B0>.l + @-><B1>.r"
+    s = s.replace('@','struct')
+    s = s.replace('->','._get')
+    s = s.replace('<','(\'')
+    s = s.replace('>','\')')
+    return eval(s)
+    
+
+#->I0 t0 struc._got()    
 
 
-class CubeSynthesis:
+class Cubism:
     def __init__(self):
         self.lib = 'None'
         self.structure_name_list = []
@@ -104,25 +223,56 @@ class CubeSynthesis:
         self.logical_unit = 0.001
         self.layer_list = []
         self.structure_dict = {}
+ 
+
+    
+    def cubism_to_cubismplus(self,cubism_folder,cubism_file,layer_map_para =[]):
+        self.layer_map_para = layer_map_para       
+        structure =  _structure()
+        structure._load_structure( cubism_folder,cubism_file)
+        for sname in structure.s_dict.keys():
+             file = open(cubism_folder + sname + ".cup", "w") 
+             temp_s= structure.s_dict[sname]
+             for ename in temp_s.e_dict.keys():
+                 temp_e = temp_s.e_dict[ename]
+                 line = temp_e.cubism_line + ' [' + temp_e.name + ']\n'
+                 file.write(line) 
+             file.close()    
+        return structure
+
+    def cubismplus_to_gds(self):
+        pass
         
-    def cube_to_gds(self,lib_name,cube_folder,cube_file,gds_file):#synthesis
+        
+
+       
+    def cubism_to_gds(self,lib_name,cubism_folder,cubism_file,gds_file,layer_map = False,layer_map_para = []):#synthesis
         lib_name_b = str.encode(lib_name+'.DB')
         lib = Library(5, lib_name_b,  self.physical_unit,self.logical_unit)
-        self.cube_to_structure(cube_folder,cube_file)
+        self.layer_map = layer_map
+        self.layer_map_para = layer_map_para
+        self.cubism_to_structure(cubism_folder,cubism_file)
         for structure in self.structure_list:
             lib.append(structure)
-        with open(cube_folder + gds_file, 'wb') as stream:
+        with open(cubism_folder + gds_file, 'wb') as stream:
             lib.save(stream)
         
-    def cube_to_structure(self,cube_folder,cube_file):    
-        file = open(cube_folder+cube_file, "r") 
-        structure_name = cube_file[:-4]
+    def cubism_to_structure(self,cubism_folder,cubism_file):    
+        file = open(cubism_folder+cubism_file, "r") 
+        structure_name = cubism_file[:-3]
         self.structure_name_list.append(structure_name)
         element_dict = {}
         self.structure_dict[structure_name] = element_dict
+        #
+        layer_map = self.layer_map
+        layer_map_para = self.layer_map_para
+        #
+        if layer_map:
+            print(layer_map_para[0],layer_map_para[1],layer_map_para[2])
+            map_dict = self.layer_mapping(layer_map_para[0],layer_map_para[1],layer_map_para[2])
         
         text = [t.strip() for t in file.readlines()]  
-        if text[0] == '@cube':
+        if text[0] == '@cubism':
             structure_name = text[1].split()[1]
             structure = Structure(structure_name.encode())
             print(structure_name)
@@ -151,6 +301,9 @@ class CubeSynthesis:
                         layer,datatype = para.split(',')
                         layer = int(layer)
                         datatype = int(datatype)
+                        if layer_map:
+                            layer,datatype = map_dict[(layer,datatype)]
+                        
                         B = Boundary(layer, datatype, xy)
                         if save_e:#save data into element dict
                             _B = _element(name,'B')
@@ -168,6 +321,8 @@ class CubeSynthesis:
                         width = int(width)
                         layer = int(layer)
                         datatype = int(datatype)
+                        if layer_map:
+                            layer,datatype = map_dict[(layer,datatype)]                        
                         if save_e:#save data into element dict
                             _P = _element(name,'P')
                             _P._read_P(xy,layer,datatype,width)
@@ -179,21 +334,28 @@ class CubeSynthesis:
                     #----------------------------------------------------------       
                     elif  dtype == 'I':   
                         xy_s = re.findall(r'\((.*?)\)', xy_s)
-                        xy =[]
+                        xy =[]             
                         for p in xy_s:
                             x,y = p.split(',')
                             xy.append((int(x),int(y)))
-                        
-                        I = SRef(para.encode(),xy)
+                        sname,mirror,angle = para.split(',')
+                        I = SRef(sname.encode(),xy)
+                        if bool(int(mirror)):
+                            I.strans = pow(2,15)
+                        else:
+                            I.strans = 0   
+                        if bool(float(angle)):
+                            I.strans = I.strans + 2
+                            I.angle = float(angle)
                         if save_e:#save data into element dict
                             _I = _element(name,'I')
-                            _I._read_I(xy,para)
+                            _I._read_I(xy,sname)
                             element_dict[name] = _I                       
                         structure.append(I)
-                        if para in self.structure_name_list:
+                        if sname in self.structure_name_list:
                             pass
                         else:
-                           self.cube_to_structure(cube_folder,para+'.txt') #think of location
+                           self.cubism_to_structure(cubism_folder,sname+'.cu') #think of location
                     #----------------------------------------------------------   
                     elif dtype == 'BR':
                         xy_s = re.findall(r'\((.*?)\)', xy_s)
@@ -206,6 +368,9 @@ class CubeSynthesis:
                         layer,datatype = para.split(',')
                         layer = int(layer)
                         datatype = int(datatype)
+                        if layer_map:
+                            layer,datatype = map_dict[(layer,datatype)]
+                            
                         if save_e:#save data into element dict
                             _BR = _element(name,'BR')
                             _BR._read_BR(R_location,xy[0],xy[1:],layer,datatype)
@@ -225,6 +390,8 @@ class CubeSynthesis:
                         width = int(width)
                         layer = int(layer)
                         datatype = int(datatype)
+                        if layer_map:
+                            layer,datatype = map_dict[(layer,datatype)]                        
                         if save_e:#save data into element dict
                             _PR = _element(name,'PR')
                             _PR._read_PR(R_location,xy[0],xy[1:],layer,datatype,width)
@@ -251,17 +418,9 @@ class CubeSynthesis:
                         if para in self.structure_name_list:
                             pass
                         else:
-                           self.cube_to_structure(cube_folder,para+'.txt') #think of location
+                           self.cubism_to_structure(cubism_folder,para+'.cu') #think of location
                     #----------------------------------------------------------
-                                                
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
+                                                              
                         
                         
                     else:
@@ -273,26 +432,30 @@ class CubeSynthesis:
        
         file.close()         
         return structure
-    def layer_map(self,layer_file,init_pdk,target_pdk):
-        layer = pd.read_csv(layer_file)
-        
+    def layer_mapping(self,layer_file,init_pdk,target_pdk):
+        layer_map = pd.read_excel(layer_file)
+        layer_map = layer_map[[init_pdk+'_l',init_pdk+'_d',target_pdk+'_l',target_pdk+'_d']]
+        map_dict = {}
+        for i,r in layer_map.iterrows():
+            map_dict[(r[init_pdk+'_l'],r[init_pdk+'_d'])] = (r[target_pdk+'_l'],r[target_pdk+'_d'])
+        return map_dict
     
-    def gds_to_cube(self,gds_file,cube_folder):
+    def gds_to_cubism(self,gds_file,cubism_folder):
         with open(gds_file, 'rb') as stream:
             lib = Library.load(stream)
             for structure in lib:
-                self.convert_structure(structure,cube_folder)                             
+                self.gds_convert_structure(structure,cubism_folder)                             
             self.layer_list =  list(set(self.layer_list))
             
-    def convert_structure(self,structure,cube_folder):
+    def gds_convert_structure(self,structure,cubism_folder):
         if isinstance(structure,Structure):         
-            s_name = cube_folder + structure.name.decode("utf-8") 
-            if os.path.isfile(s_name + '.txt'):
+            s_name = cubism_folder + structure.name.decode("utf-8") 
+            if os.path.isfile(s_name + '.cu'):
                 print(s_name + ' exist!')
                 pass
             else:
-                file = open(s_name + ".txt", "w") 
-                file.write('@cube\n')
+                file = open(s_name + ".cu", "w") 
+                file.write('@cubism\n')
                 file.write('layout ' + structure.name.decode("utf-8") + '\n')
                                     
                 for element in structure:
@@ -309,8 +472,14 @@ class CubeSynthesis:
                         file.write(line)  
                         self.layer_list.append((element.layer,element.data_type))                        
                     elif  isinstance(element,SRef):   
+                        mirror = 0
+                        angle = 0
+                        if bool(element.strans):
+                           mirror = 1 
+                        if bool(element.angle):
+                            angle = element.angle
                         line = 'I ' + str(element.xy)
-                        line = line + ' ['+ str(element.struct_name.decode("utf-8") ) + ']\n'
+                        line = line + ' ['+ str(element.struct_name.decode("utf-8") ) + ','+ str(mirror) +',' + str(angle) + ']\n'
                         file.write(line)                    
                     else:
                         print(element)
@@ -330,19 +499,6 @@ file.write("Your text goes here")
 file.close() 
 
 os.path.isfile('copy2.txt')
-
-
-
-
-c = CubeSynthesis()
-#c.gds_to_cube('../gds/inv.gds','cubefile/inv/')
-
-test = c.cube_to_gds("smic14ff_lei_test","cubefile/inv2/","inv_test.txt","cube.gds")
-
-
-
-
-
 
 
 
