@@ -11,6 +11,85 @@ from  python_gdsii.gdsii.elements import Boundary,ARef,Box,Path,SRef,Text
 import os
 import re
 import pandas as pd
+from Design_Rule import Design_Rule as DR
+import Module_Device_Generator as Module_DG
+
+dr = DR('hlmc_55')
+
+def Gen_Layout_Database(layout_dict,path):
+    name = layout_dict['name']
+    file = open(path + name + ".ld", "w") 
+    file.write('@LayoutDatabase\n')
+    file.write('layout ' + name + '\n')  
+    for line in layout_dict['db']:
+        file.write(line)
+    file.write('endlayout')                 
+    file.close()        
+    
+
+
+def Compile_Layout_Database(folder,file,dr):
+    file_r = open(folder + '/' + file, "r") 
+    text = [t.strip() for t in file_r.readlines()]    
+    
+    file_w = open(folder + '/' + file[:-3] + "_c.ld", "w")     
+    file_w.write('@LayoutDatabase\n')
+    file_w.write('layout ' + file[:-3] + '\n')  
+    
+    def gen_device(name,loc):
+        if name == 'n25':
+            return Module_DG.Mosfet('n25',loc,280,1000,dr)
+        elif name == 'p25':
+            return Module_DG.Mosfet('p25',loc,280,1000,dr,mtype = 'P') 
+
+    I_dict = {}
+    if text[0] == '@LayoutDatabase':
+        name = text[1].split()[1]
+        for line in text[2:-1]:
+            name = line.split()[0]
+            line1,line2 =  re.findall('\[(.*?)\]', line) 
+            
+            if name[0] == 'I':    
+                if line1[0] == '(':
+                    I_name = line2.split(',')[0]
+                    I_dict[name] = gen_device(I_name,eval(line1))
+                    file_w.write(I_dict[name].gen_I_rect(I_name) )
+                    
+                elif line1[0] == 'T':  
+                    t1,t2,t3=  re.findall('\((.*?)\)', line1)[0].split(',') 
+                    if t1 == 'CommonSD':
+                        mos = I_dict[t2]
+                        l = dr._('CT_w') + 2*dr._('CT_s_GT')
+                        new_loc = [mos.loc[0] + l + mos.l,mos.loc[1]]
+                        I_name = line2.split(',')[0] 
+                        I_dict[name] = gen_device(I_name,new_loc)
+                        file_w.write(I_dict[name].gen_I_rect(I_name) )                    
+                    
+            elif name[0] == 'B':
+                print('ttt')
+#            l_type,t1,t2 = line.split(' [')
+#            loc = eval('[' + t1)
+#            layer = t2[:-1]
+#            plot_para = dr.get_plot_para(layer)
+#            ax.add_patch(mpatches.Polygon(loc, closed=True,fill=False,
+#                        color = plot_para[0],hatch = plot_para[1],
+#                        linestyle =  plot_para[2],alpha = plot_para[3]))
+#            print(layer,plot_para)    
+    file_w.write('endlayout')                 
+    file_w.close()     
+    return I_dict
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
