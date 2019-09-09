@@ -16,11 +16,9 @@ def layout_viewer(folder,file,dr):
     if text[0] == '@LayoutDatabase':
         name = text[1].split()[1]
         for line in text[2:-1]:
-            print(line,'******************')
             l_type,t1,t2 = line.split(' [')
             loc = eval('[' + t1)
             layer = t2[:-1]
-            
             if l_type == 'B':          
                 plot_para = dr.get_plot_para(layer)
                 ax.add_patch(mpatches.Polygon(loc, closed=True,fill=False,
@@ -32,8 +30,7 @@ def layout_viewer(folder,file,dr):
                 polygons = path_to_polygon(loc,int(path_w))
                 for polygon in polygons:
                     ax.add_patch(mpatches.Polygon(polygon, closed=True,fill=True,
-                                color = plot_para[0],alpha = 0.5))                  
-                    
+                                color = plot_para[0],alpha = 0.5))                                    
             elif l_type == 'I':
                 I_loc = loc[0]
                 name,para1,para2 = layer.split(',')#maybe more hiearchy here, need more improvement
@@ -47,8 +44,7 @@ def layout_viewer(folder,file,dr):
                         orig_loc = eval('[' + t1)
                         loc = []
                         for p in orig_loc:
-                            loc.append([p[0] + I_loc[0],p[1] + I_loc[1]])
-                        
+                            loc.append([p[0] + I_loc[0],p[1] + I_loc[1]])                       
                         layer = t2[:-1]
                         if l_type == 'B':          
                             plot_para = dr.get_plot_para(layer)
@@ -61,16 +57,9 @@ def layout_viewer(folder,file,dr):
                             polygons = path_to_polygon(loc,int(path_w))
                             for polygon in polygons:
                                 ax.add_patch(mpatches.Polygon(polygon, closed=True,fill=True,
-                                            color = plot_para[0],alpha = 0.5))  
-
-
-
-
-            #print(layer,plot_para)
-            
-            
+                                            color = plot_para[0],alpha = 0.5))      
     plt.axis('equal')
-    plt.axis('off')
+    #plt.axis('off')
     plt.tight_layout()
     plt.show()        
     return (l_type,loc,layer)
@@ -80,7 +69,6 @@ def layout_viewer(folder,file,dr):
 def path_segment_to_boundary(start_p,end_p,width):
     x1,y1 = start_p
     x2,y2 = end_p
-    print(width)
     w = 0.5*width
     if (x1 == x2)&(y1!=y2):
         return [[x1-w,y1],[x1+w,y1],[x2+w,y2],[x2-w,y2],[x1-w,y1]]

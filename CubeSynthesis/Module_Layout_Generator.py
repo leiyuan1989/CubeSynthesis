@@ -60,10 +60,20 @@ def Compile_Layout_Database(folder,file,dr):
                     if t1 == 'CommonSD':
                         mos = I_dict[t2]
                         l = dr._('CT_w') + 2*dr._('CT_s_GT')
-                        new_loc = [mos.loc[0] + l + mos.l,mos.loc[1]]
+                        new_loc = (mos.loc[0] + l + mos.l,mos.loc[1])
                         I_name = line2.split(',')[0] 
                         I_dict[name] = gen_device(I_name,new_loc)
-                        file_w.write(I_dict[name].gen_I_rect(I_name) )                    
+                        file_w.write(I_dict[name].gen_I_rect(I_name) )  
+                    if t1 == 'CommonCentre':
+                        mos = I_dict[t2]
+                        new_x = mos.PO._c[0]
+                        if t3 == 'u':
+                            new_y = mos.PO_Up._u + 0.5*dr._('M1_PO_h')
+                        elif t3 == 'd':
+                            new_y = mos.PO_Down._d - 0.5*dr._('M1_PO_h')                            
+                        I_name = line2.split(',')[0] 
+                        line = 'I [' + str((new_x,new_y))+ '] [' + I_name + ',0,0]\n'                    
+                        file_w.write(line )                        
                     
             elif name[0] == 'B':
                 print('ttt')

@@ -81,6 +81,9 @@ class Mosfet:#single gate: this is a demo device, and it need to add finger numb
                         self.loc[0] + self.l + dr._('CT_s_GT') + dr._('CT_w'),
                         self.loc[1] + self.fw,
                         self.loc[1]]        
+ 
+
+        
         
         CT_Left =  self.gen_Via(self.CT_Left_Rect,dr._('CT_w'),dr._('CT_s'),dr._('AA_enc_CT'),axis = 1)
         CT_Right =  self.gen_Via(self.CT_Right_Rect,dr._('CT_w'),dr._('CT_s'),dr._('AA_enc_CT'),axis = 1)        
@@ -89,6 +92,15 @@ class Mosfet:#single gate: this is a demo device, and it need to add finger numb
         self.AA_Right = Rect(AA_Right_Rect,dr.AA)        
         self.PO = Rect(PO_Rect,dr.PO)
         self.AA = Rect(PO_Rect,dr.AA)        
+        
+        PO_Up_Rect = [self.PO._l,self.PO._r,
+                      self.PO._u+ dr._('PO_ext_AA'),self.PO._u]          
+        
+        PO_Down_Rect = [self.PO._l,self.PO._r,
+                        self.PO._d,self.PO._d - dr._('PO_ext_AA')]     
+
+        self.PO_Up = Rect(PO_Up_Rect,dr.PO)
+        self.PO_Down = Rect(PO_Down_Rect,dr.PO)   
         
         self.CT_Left = []
         for rect in CT_Left:
@@ -121,6 +133,8 @@ class Mosfet:#single gate: this is a demo device, and it need to add finger numb
         self.dict['db'].append(self.gen_line_rect(self.AA_Right))
         self.dict['db'].append(self.gen_line_rect(self.PO))
         self.dict['db'].append(self.gen_line_rect(self.AA))
+        self.dict['db'].append(self.gen_line_rect(self.PO_Up))
+        self.dict['db'].append(self.gen_line_rect(self.PO_Down))
         
         for rect in self.CT_Left:
             self.dict['db'].append(self.gen_line_rect(rect))            
