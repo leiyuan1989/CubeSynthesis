@@ -6,4 +6,15 @@ I3 [T,(CommonSD,I1,r)] [p25,0,0]
 I4 [T,(CommonSD,I3,r)] [p25,0,0]
 I5 [T,(CommonSD,I2,r)] [n25,0,0]
 I6 [T,(CommonSD,I5,r)] [n25,0,0]
+I7 []
+I8 []
+
+
+P1
+p2
+p3
+p4
+p5
+p6
+
 endlayout
